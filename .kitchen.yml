@@ -70,3 +70,6 @@ suites:
 - name: cloudwatch_monitoring
   run_list:
   - recipe[cloudwatch_monitoring::default]
+  attributes: 
+    cloudwatch_monitoring: 
+      cleanup_cache: true
