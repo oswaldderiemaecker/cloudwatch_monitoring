@@ -18,8 +18,10 @@ Requirements
 
 ## Platform:
 
-* Ubuntu/Debian
-* RHEL
+* Ubuntu 12.04/14.04/16.04
+* Debian 7/8
+* Fedora 24
+* Centos 7
 
 
 Attributes
