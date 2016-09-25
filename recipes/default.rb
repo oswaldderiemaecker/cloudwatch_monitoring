@@ -26,22 +26,21 @@ include_recipe 'cron'
 install_path="#{node[:cw_mon][:home_dir]}/aws-scripts-mon-v#{node[:cw_mon][:version]}"
 zip_filepath="#{node[:cw_mon][:home_dir]}/CloudWatchMonitoringScripts-v#{node[:cw_mon][:version]}.zip"
 
+package 'unzip'
+
 case node[:platform_family]
   when 'rhel'
-    %w{unzip perl-CPAN}.each do |p|
+    %w{unzip perl perl-CPAN perl-LWP-Protocol-https perl-Switch perl-Crypt-SSLeay perl-Sys-Syslog}.each do |p|
       package p
     end
 
-    %w{Test::More Bundle::LWP5_837 Bundle::LWP}.each do |m|
-      execute "install Perl module #{m}" do
-        command "perl -MCPAN -e 'install #{m}' < /dev/null"
-        not_if { ::File.directory?(install_path) }
-      end
+  when 'fedora'
+    %w{unzip perl perl-CPAN perl-LWP-Protocol-https perl-Switch perl-Crypt-SSLeay perl-Sys-Syslog}.each do |p|
+      package p
     end
 
   when 'debian'
-
-    %w{unzip libwww-perl libcrypt-ssleay-perl}.each do |p|
+    %w{unzip libwww-perl libswitch-perl libcrypt-ssleay-perl}.each do |p|
       package p do
         action :install
       end
@@ -130,4 +129,9 @@ cron_d 'cloudwatch_monitoring' do
   minute "*/#{node[:cw_mon][:cron_minutes]}"
   user node[:cw_mon][:user]
   command %Q{#{install_path}/mon-put-instance-data.pl #{(options).join(' ')} || logger -t aws-scripts-mon "status=failed exit_code=$?"}
+end
+
+directory " /var/tmp/aws-mon" do
+  recursive true
+  action :delete
 end

@@ -2,6 +2,9 @@
 
 This file is used to list changes made in each version of cloudwatch_monitoring.
 
+## 1.2.1:
+* clean up the /var/tmp/aws-mon folder to remove instance-id in case of packing an AMI 
+
 ## 1.2.0:
 * query instance metadata to get instance role instead of EC2 Ohai attribute.
 
