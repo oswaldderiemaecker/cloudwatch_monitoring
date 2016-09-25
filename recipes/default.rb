@@ -23,33 +23,30 @@
 
 include_recipe 'cron'
 
-install_path="#{node[:cw_mon][:home_dir]}/aws-scripts-mon-v#{node[:cw_mon][:version]}"
-zip_filepath="#{node[:cw_mon][:home_dir]}/CloudWatchMonitoringScripts-v#{node[:cw_mon][:version]}.zip"
+install_path = "#{node[:cw_mon][:home_dir]}/aws-scripts-mon-v#{node[:cw_mon][:version]}"
+zip_filepath = "#{node[:cw_mon][:home_dir]}/CloudWatchMonitoringScripts-v#{node[:cw_mon][:version]}.zip"
 
 package 'unzip'
 
 case node[:platform_family]
-  when 'rhel'
-    %w{unzip perl perl-CPAN perl-LWP-Protocol-https perl-Switch perl-Crypt-SSLeay perl-Sys-Syslog}.each do |p|
-      package p
+when 'rhel'
+  %w(unzip perl perl-CPAN perl-LWP-Protocol-https perl-Switch perl-Crypt-SSLeay perl-Sys-Syslog).each do |p|
+    package p
+  end
+when 'fedora'
+  %w(unzip perl perl-CPAN perl-LWP-Protocol-https perl-Switch perl-Crypt-SSLeay perl-Sys-Syslog).each do |p|
+    package p
+  end
+when 'debian'
+  %w(unzip libwww-perl libswitch-perl libcrypt-ssleay-perl).each do |p|
+    package p do
+      action :install
     end
-
-  when 'fedora'
-    %w{unzip perl perl-CPAN perl-LWP-Protocol-https perl-Switch perl-Crypt-SSLeay perl-Sys-Syslog}.each do |p|
-      package p
-    end
-
-  when 'debian'
-    %w{unzip libwww-perl libswitch-perl libcrypt-ssleay-perl}.each do |p|
-      package p do
-        action :install
-      end
-    end
-
-  else
-    log "#{node[:platform_family]} is not supported" do
-      level :warn
-    end
+  end
+else
+  log "#{node[:platform_family]} is not supported" do
+    level :warn
+  end
 end
 
 group node[:cw_mon][:group] do
@@ -67,7 +64,6 @@ directory node[:cw_mon][:home_dir] do
   owner node[:cw_mon][:user]
 end
 
-
 remote_file zip_filepath do
   source node[:cw_mon][:release_url]
   owner node[:cw_mon][:user]
@@ -75,7 +71,6 @@ remote_file zip_filepath do
   mode 0755
   not_if { File.directory? install_path }
 end
-
 
 bash 'extract_aws-scripts-mon' do
   user node[:cw_mon][:user]
@@ -90,7 +85,6 @@ bash 'extract_aws-scripts-mon' do
   EOH
   not_if { File.directory? install_path }
 end
-
 
 file zip_filepath do
   action :delete
@@ -109,9 +103,9 @@ else
     user_creds = Chef::EncryptedDataBagItem.load(node[:cw_mon][:aws_users_databag], node[:cw_mon][:user])
     vars[:access_key_id] = user_creds['access_key_id']
     vars[:secret_access_key] = user_creds['secret_access_key']
-    log "AWS key for user #{ node[:cw_mon][:user]} found in databag #{node[:cw_mon][:aws_users_databag]}"
+    log "AWS key for user #{node[:cw_mon][:user]} found in databag #{node[:cw_mon][:aws_users_databag]}"
   rescue
-    vars =node[:cw_mon]
+    vars = node[:cw_mon]
   end
 
   template "#{install_path}/awscreds.conf" do
@@ -119,7 +113,7 @@ else
     group node[:cw_mon][:group]
     mode 0644
     source 'awscreds.conf.erb'
-    variables :cw_mon => vars
+    variables cw_mon: vars
   end
 
   options << "--aws-credential-file #{install_path}/awscreds.conf"
@@ -131,7 +125,9 @@ cron_d 'cloudwatch_monitoring' do
   command %Q{#{install_path}/mon-put-instance-data.pl #{(options).join(' ')} || logger -t aws-scripts-mon "status=failed exit_code=$?"}
 end
 
-directory " /var/tmp/aws-mon" do
-  recursive true
-  action :delete
+if node[:cloudwatch_monitoring][:cleanup_cache] == true
+  directory '/var/tmp/aws-mon' do
+    recursive true
+    action :delete
+  end
 end
